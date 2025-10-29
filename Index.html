@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab Computer Checklist Tracker</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 16px;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 48px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .stat-label {
+            font-size: 16px;
+            opacity: 0.9;
+        }
+
+        .controls {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+        }
+
+        .control-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .control-row:last-child {
+            margin-bottom: 0;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            min-width: 200px;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        select {
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            background: white;
+            cursor: pointer;
+        }
+
+        button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #218838;
+        }
+
+        .btn-warning {
+            background: #ffc107;
+            color: #000;
+        }
+
+        .btn-warning:hover {
+            background: #e0a800;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #c82333;
+        }
+
+        .computers-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+        }
+
+        .computer-card {
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: white;
+        }
+
+        .computer-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+
+        .computer-card.completed {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+            border-color: #11998e;
+        }
+
+        .computer-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .computer-icon {
+            font-size: 32px;
+        }
+
+        .computer-name {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .computer-type {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 15px;
+        }
+
+        .type-prod {
+            background: #ffc107;
+            color: #000;
+        }
+
+        .type-dev {
+            background: #17a2b8;
+            color: white;
+        }
+
+        .computer-card.completed .computer-type {
+            background: rgba(255,255,255,0.3);
+            color: white;
+        }
+
+        .progress-info {
+            font-size: 14px;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        .progress-bar {
+            height: 8px;
+            background: #e9ecef;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 10px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.3s;
+        }
+
+        .computer-card.completed .progress-bar {
+            background: rgba(255,255,255,0.3);
+        }
+
+        .computer-card.completed .progress-fill {
+            background: white;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .status-complete {
+            background: rgba(255,255,255,0.3);
+            color: white;
+        }
+
+        .status-incomplete {
+            background: #ffc107;
+            color: #000;
+        }
+
+        .detail-view {
+            display: none;
+        }
+
+        .detail-view.active {
+            display: block;
+        }
+
+        .detail-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .detail-title {
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .detail-progress {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .checklist {
+            list-style: none;
+        }
+
+        .checklist-item {
+            background: white;
+            border: 2px solid #e9ecef;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .checklist-item:hover {
+            border-color: #667eea;
+            background: #f8f9ff;
+        }
+
+        .checklist-item.checked {
+            background: #d4edda;
+            border-color: #28a745;
+        }
+
+        .checklist-item input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            margin-right: 15px;
+            cursor: pointer;
+        }
+
+        .checklist-item label {
+            cursor: pointer;
+            flex: 1;
+            font-size: 15px;
+        }
+
+        .settings-view {
+            display: none;
+        }
+
+        .settings-view.active {
+            display: block;
+        }
+
+        .settings-list {
+            list-style: none;
+        }
+
+        .settings-item {
+            background: white;
+            border: 2px solid #e9ecef;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .settings-item input {
+            flex: 1;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        .settings-item button {
+            padding: 8px 16px;
+        }
+
+        .warning {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            color: #856404;
+        }
+
+        .success-message {
+            background: #d4edda;
+            border: 2px solid #28a745;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            color: #155724;
+            display: none;
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🖥️ Lab Computer Checklist Tracker</h1>
+            <p>Track computer checkups and maintenance tasks</p>
+        </div>
+
+        <div class="content">
+            <!-- Dashboard View -->
+            <div id="dashboardView">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-number" id="totalComputers">0</div>
+                        <div class="stat-label">Total Computers</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="completedComputers">0</div>
+                        <div class="stat-label">Completed Computers</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="pendingComputers">0</div>
+                        <div class="stat-label">Pending Computers</div>
+                    </div>
+                </div>
+
+                <div class="controls">
+                    <div class="control-row">
+                        <input type="text" id="computerName" placeholder="Enter computer name...">
+                        <select id="computerType">
+                            <option value="Production">Production</option>
+                            <option value="Development">Development</option>
+                        </select>
+                        <button class="btn-primary" onclick="addComputer()">Add Computer</button>
+                    </div>
+                    <div class="control-row">
+                        <button class="btn-secondary" onclick="showSettings()">⚙️ Settings</button>
+                        <button class="btn-success" onclick="exportToCSV()">📥 Export CSV</button>
+                        <button class="btn-success" onclick="document.getElementById('importFile').click()">📤 Import CSV</button>
+                        <input type="file" id="importFile" accept=".csv" onchange="importFromCSV(event)">
+                    </div>
+                    <div class="control-row">
+                        <button class="btn-warning" onclick="resetAllChecks()">🔄 Reset All Checks</button>
+                        <button class="btn-danger" onclick="clearAllData()">🗑️ Clear All Data</button>
+                        <button class="btn-danger" onclick="deleteAllComputers()">🗑️ Delete All Computers</button>
+                    </div>
+                </div>
+
+                <div id="successMessage" class="success-message"></div>
+
+                <div class="computers-grid" id="computersGrid"></div>
+            </div>
+
+            <!-- Detail View -->
+            <div id="detailView" class="detail-view">
+                <div class="detail-header">
+                    <div>
+                        <div class="detail-title" id="detailComputerName"></div>
+                        <span class="computer-type" id="detailComputerType"></span>
+                    </div>
+                    <div style="display: flex; gap: 10px;">
+                        <button class="btn-secondary" onclick="showDashboard()">← Back</button>
+                        <button class="btn-danger" onclick="deleteCurrentComputer()">Delete Computer</button>
+                    </div>
+                </div>
+
+                <div class="detail-progress">
+                    <div class="progress-info" id="detailProgress"></div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="detailProgressFill"></div>
+                    </div>
+                </div>
+
+                <ul class="checklist" id="detailChecklist"></ul>
+            </div>
+
+            <!-- Settings View -->
+            <div id="settingsView" class="settings-view">
+                <div class="detail-header">
+                    <div class="detail-title">Checklist Settings</div>
+                    <button class="btn-secondary" onclick="showDashboard()">← Back</button>
+                </div>
+
+                <div class="warning">
+                    <strong>⚠️ Warning:</strong> Changes to the checklist only affect NEW computers. Existing computers will keep their current tasks.
+                </div>
+
+                <ul class="settings-list" id="settingsList"></ul>
+
+                <div class="control-row" style="margin-top: 20px;">
+                    <input type="text" id="newTaskInput" placeholder="Enter new task...">
+                    <button class="btn-primary" onclick="addNewTask()">Add Task</button>
+                    <button class="btn-danger" onclick="resetToDefault()">Reset to Default</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const DEFAULT_CHECKLIST = [
+            "Check SCCM PC Admin for windows site",
+            "Check SCCM PC Admin for missing package",
+            "Check number of app installed (28 for PROD 32-34 for DEV)",
+            "Check for bitlocker encription (manage-bde -status)",
+            "Check Windows Update version",
+            "Check software updates",
+            "Scan for viruses/malware",
+            "Clean temporary files",
+            "Test audio output",
+            "Verify printer connection",
+            "Check available disk space"
+        ];
+
+        let computers = [];
+        let checklist = [...DEFAULT_CHECKLIST];
+        let currentComputerId = null;
+
+        // Load data from localStorage
+        function loadData() {
+            try {
+                const savedComputers = localStorage.getItem('labComputers');
+                const savedChecklist = localStorage.getItem('labChecklist');
+                
+                if (savedComputers) {
+                    const parsed = JSON.parse(savedComputers);
+                    computers = Array.isArray(parsed) ? parsed : [];
+                } else {
+                    computers = [];
+                }
+                
+                if (savedChecklist) {
+                    const parsed = JSON.parse(savedChecklist);
+                    checklist = Array.isArray(parsed) ? parsed : [...DEFAULT_CHECKLIST];
+                } else {
+                    checklist = [...DEFAULT_CHECKLIST];
+                }
+            } catch (e) {
+                console.error('Error loading data:', e);
+                computers = [];
+                checklist = [...DEFAULT_CHECKLIST];
+            }
+        }
+
+        // Save data to localStorage
+        function saveData() {
+            try {
+                localStorage.setItem('labComputers', JSON.stringify(computers));
+                localStorage.setItem('labChecklist', JSON.stringify(checklist));
+            } catch (e) {
+                console.error('Error saving data:', e);
+                alert('Error saving data. Please try again.');
+            }
+        }
+
+        // Show success message
+        function showSuccess(message) {
+            const msgEl = document.getElementById('successMessage');
+            msgEl.textContent = message;
+            msgEl.style.display = 'block';
+            setTimeout(() => {
+                msgEl.style.display = 'none';
+            }, 3000);
+        }
+
+        // Add new computer
+        function addComputer() {
+            const nameInput = document.getElementById('computerName');
+            const typeSelect = document.getElementById('computerType');
+            const name = nameInput.value.trim();
+            
+            if (!name) {
+                alert('Please enter a computer name');
+                return;
+            }
+
+            const computer = {
+                id: Date.now(),
+                name: name,
+                type: typeSelect.value,
+                tasks: checklist.map((task, index) => ({
+                    id: index,
+                    text: task,
+                    completed: false
+                }))
+            };
+
+            computers.push(computer);
+            saveData();
+            nameInput.value = '';
+            renderDashboard();
+            showSuccess(`Computer "${name}" added successfully!`);
+        }
+
+        // Delete computer
+        function deleteComputer(id) {
+            const computer = computers.find(c => c.id === id);
+            if (computer && confirm(`Are you sure you want to delete "${computer.name}"?`)) {
+                computers = computers.filter(c => c.id !== id);
+                saveData();
+                renderDashboard();
+                showSuccess(`Computer "${computer.name}" deleted successfully!`);
+            }
+        }
+
+        // Delete current computer from detail view
+        function deleteCurrentComputer() {
+            if (currentComputerId) {
+                const computer = computers.find(c => c.id === currentComputerId);
+                if (computer && confirm(`Are you sure you want to delete "${computer.name}"?`)) {
+                    computers = computers.filter(c => c.id !== currentComputerId);
+                    saveData();
+                    showDashboard();
+                    showSuccess(`Computer "${computer.name}" deleted successfully!`);
+                }
+            }
+        }
+
+        // Delete all computers
+        function deleteAllComputers() {
+            if (computers.length === 0) {
+                alert('No computers to delete');
+                return;
+            }
+            if (confirm('Are you sure you want to delete ALL computers? This cannot be undone.')) {
+                computers = [];
+                saveData();
+                renderDashboard();
+                showSuccess('All computers deleted successfully!');
+            }
+        }
+
+        // Clear all data (computers AND checklist)
+        function clearAllData() {
+            if (confirm('This will delete ALL computers AND reset the checklist to default. Are you sure?')) {
+                computers = [];
+                checklist = [...DEFAULT_CHECKLIST];
+                localStorage.clear();
+                saveData();
+                renderDashboard();
+                showSuccess('All data cleared! Starting fresh.');
+            }
+        }
+
+        // Reset all checks
+        function resetAllChecks() {
+            if (computers.length === 0) {
+                alert('No computers to reset');
+                return;
+            }
+            if (confirm('Reset all task checks for all computers?')) {
+                computers.forEach(computer => {
+                    computer.tasks.forEach(task => {
+             

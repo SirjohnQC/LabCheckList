@@ -508,18 +508,13 @@
 
     <script>
         const DEFAULT_CHECKLIST = [
+            "Check for bitlocker encription (manage-bde -status)"
             "Check SCCM PC Admin for windows site",
             "Check SCCM PC Admin for missing package",
-            "Check number of app installed (28 for PROD 32-34 for DEV)",
-            "Check for bitlocker encription (manage-bde -status)",
-            "Check Windows Update version",
-            "Check software updates",
-            "Scan for viruses/malware",
-            "Clean temporary files",
-            "Test audio output",
-            "Verify printer connection",
-            "Check available disk space"
-        ];
+            "Check number of app installed",
+            "Check for Windows Updates",
+            "Add user to remote desktop settings",
+                    ];
 
         let computers = [];
         let checklist = [...DEFAULT_CHECKLIST];

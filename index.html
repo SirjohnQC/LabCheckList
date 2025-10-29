@@ -660,4 +660,311 @@
             if (confirm('Reset all task checks for all computers?')) {
                 computers.forEach(computer => {
                     computer.tasks.forEach(task => {
-             
+                        task.completed = false;
+                    });
+                });
+                saveData();
+                renderDashboard();
+                showSuccess('All checks reset successfully!');
+            }
+        }
+
+        // Export to CSV
+        function exportToCSV() {
+            if (computers.length === 0) {
+                alert('No data to export');
+                return;
+            }
+
+            let csv = 'Computer Name,Type,Task,Completed\n';
+            
+            computers.forEach(computer => {
+                computer.tasks.forEach(task => {
+                    const row = [
+                        `"${computer.name}"`,
+                        `"${computer.type}"`,
+                        `"${task.text}"`,
+                        task.completed ? 'Yes' : 'No'
+                    ].join(',');
+                    csv += row + '\n';
+                });
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `lab-computers-${new Date().toISOString().split('T')[0]}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+            
+            showSuccess('Data exported successfully!');
+        }
+
+        // Import from CSV
+        function importFromCSV(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const text = e.target.result;
+                    const lines = text.split('\n').filter(line => line.trim());
+                    
+                    if (lines.length < 2) {
+                        alert('Invalid CSV file');
+                        return;
+                    }
+
+                    // Skip header
+                    const dataLines = lines.slice(1);
+                    const importedComputers = {};
+
+                    dataLines.forEach(line => {
+                        const match = line.match(/^"([^"]*)","([^"]*)","([^"]*)","?([^"]*)"?$/);
+                        if (!match) return;
+
+                        const [, name, type, taskText, completed] = match;
+                        
+                        if (!importedComputers[name]) {
+                            importedComputers[name] = {
+                                id: Date.now() + Math.random(),
+                                name: name,
+                                type: type,
+                                tasks: []
+                            };
+                        }
+
+                        importedComputers[name].tasks.push({
+                            id: importedComputers[name].tasks.length,
+                            text: taskText,
+                            completed: completed.toLowerCase() === 'yes'
+                        });
+                    });
+
+                    if (Object.keys(importedComputers).length === 0) {
+                        alert('No valid data found in CSV');
+                        return;
+                    }
+
+                    if (confirm(`Import ${Object.keys(importedComputers).length} computers? This will REPLACE all current data.`)) {
+                        computers = Object.values(importedComputers);
+                        saveData();
+                        renderDashboard();
+                        showSuccess(`Successfully imported ${computers.length} computers!`);
+                    }
+                } catch (error) {
+                    console.error('Import error:', error);
+                    alert('Error importing CSV file. Please check the format.');
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = '';
+        }
+
+        // Toggle task
+        function toggleTask(computerId, taskId) {
+            const computer = computers.find(c => c.id === computerId);
+            if (computer) {
+                const task = computer.tasks.find(t => t.id === taskId);
+                if (task) {
+                    task.completed = !task.completed;
+                    saveData();
+                    renderDetailView(computerId);
+                    renderDashboard();
+                }
+            }
+        }
+
+        // Calculate progress
+        function calculateProgress(computer) {
+            const completed = computer.tasks.filter(t => t.completed).length;
+            const total = computer.tasks.length;
+            return { completed, total, percentage: (completed / total) * 100 };
+        }
+
+        // Render dashboard
+        function renderDashboard() {
+            const grid = document.getElementById('computersGrid');
+            grid.innerHTML = '';
+
+            if (computers.length === 0) {
+                grid.innerHTML = '<p style="grid-column: 1/-1; text-align: center; padding: 40px; color: #6c757d;">No computers added yet. Add one to get started!</p>';
+            }
+
+            computers.forEach(computer => {
+                const progress = calculateProgress(computer);
+                const isComplete = progress.completed === progress.total;
+
+                const card = document.createElement('div');
+                card.className = `computer-card ${isComplete ? 'completed' : ''}`;
+                card.onclick = () => showDetailView(computer.id);
+
+                card.innerHTML = `
+                    <div class="computer-header">
+                        <div class="computer-icon">${isComplete ? '✅' : '🖥️'}</div>
+                    </div>
+                    <div class="computer-name">${computer.name}</div>
+                    <span class="computer-type ${computer.type === 'Production' ? 'type-prod' : 'type-dev'}">
+                        ${computer.type}
+                    </span>
+                    <div class="progress-info">${progress.completed}/${progress.total} tasks</div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: ${progress.percentage}%"></div>
+                    </div>
+                    <span class="status-badge ${isComplete ? 'status-complete' : 'status-incomplete'}">
+                        ${isComplete ? 'Complete' : 'In Progress'}
+                    </span>
+                `;
+
+                grid.appendChild(card);
+            });
+
+            updateStats();
+        }
+
+        // Update statistics
+        function updateStats() {
+            const total = computers.length;
+            const completed = computers.filter(c => {
+                const progress = calculateProgress(c);
+                return progress.completed === progress.total;
+            }).length;
+            const pending = total - completed;
+
+            document.getElementById('totalComputers').textContent = total;
+            document.getElementById('completedComputers').textContent = completed;
+            document.getElementById('pendingComputers').textContent = pending;
+        }
+
+        // Show detail view
+        function showDetailView(computerId) {
+            currentComputerId = computerId;
+            document.getElementById('dashboardView').classList.remove('active');
+            document.getElementById('dashboardView').style.display = 'none';
+            document.getElementById('detailView').classList.add('active');
+            document.getElementById('settingsView').classList.remove('active');
+            renderDetailView(computerId);
+        }
+
+        // Render detail view
+        function renderDetailView(computerId) {
+            const computer = computers.find(c => c.id === computerId);
+            if (!computer) return;
+
+            const progress = calculateProgress(computer);
+
+            document.getElementById('detailComputerName').textContent = computer.name;
+            const typeSpan = document.getElementById('detailComputerType');
+            typeSpan.textContent = computer.type;
+            typeSpan.className = `computer-type ${computer.type === 'Production' ? 'type-prod' : 'type-dev'}`;
+
+            document.getElementById('detailProgress').textContent = 
+                `${progress.completed} of ${progress.total} tasks completed`;
+            document.getElementById('detailProgressFill').style.width = `${progress.percentage}%`;
+
+            const checklistEl = document.getElementById('detailChecklist');
+            checklistEl.innerHTML = '';
+
+            computer.tasks.forEach(task => {
+                const li = document.createElement('li');
+                li.className = `checklist-item ${task.completed ? 'checked' : ''}`;
+                li.onclick = () => toggleTask(computerId, task.id);
+
+                li.innerHTML = `
+                    <input type="checkbox" ${task.completed ? 'checked' : ''} onclick="event.stopPropagation(); toggleTask(${computerId}, ${task.id})">
+                    <label>${task.text}</label>
+                `;
+
+                checklistEl.appendChild(li);
+            });
+        }
+
+        // Show dashboard
+        function showDashboard() {
+            currentComputerId = null;
+            document.getElementById('dashboardView').style.display = 'block';
+            document.getElementById('dashboardView').classList.add('active');
+            document.getElementById('detailView').classList.remove('active');
+            document.getElementById('settingsView').classList.remove('active');
+            renderDashboard();
+        }
+
+        // Show settings
+        function showSettings() {
+            document.getElementById('dashboardView').style.display = 'none';
+            document.getElementById('dashboardView').classList.remove('active');
+            document.getElementById('detailView').classList.remove('active');
+            document.getElementById('settingsView').classList.add('active');
+            renderSettings();
+        }
+
+        // Render settings
+        function renderSettings() {
+            const list = document.getElementById('settingsList');
+            list.innerHTML = '';
+
+            checklist.forEach((task, index) => {
+                const li = document.createElement('li');
+                li.className = 'settings-item';
+
+                li.innerHTML = `
+                    <input type="text" value="${task}" onchange="updateTask(${index}, this.value)">
+                    <button class="btn-danger" onclick="deleteTask(${index})">Delete</button>
+                `;
+
+                list.appendChild(li);
+            });
+        }
+
+        // Update task in checklist
+        function updateTask(index, newText) {
+            if (newText.trim()) {
+                checklist[index] = newText.trim();
+                saveData();
+            }
+        }
+
+        // Delete task from checklist
+        function deleteTask(index) {
+            if (confirm('Delete this task from the checklist?')) {
+                checklist.splice(index, 1);
+                saveData();
+                renderSettings();
+            }
+        }
+
+        // Add new task
+        function addNewTask() {
+            const input = document.getElementById('newTaskInput');
+            const text = input.value.trim();
+
+            if (!text) {
+                alert('Please enter a task');
+                return;
+            }
+
+            checklist.push(text);
+            saveData();
+            input.value = '';
+            renderSettings();
+        }
+
+        // Reset to default checklist
+        function resetToDefault() {
+            if (confirm('Reset checklist to default? This will not affect existing computers.')) {
+                checklist = [...DEFAULT_CHECKLIST];
+                saveData();
+                renderSettings();
+            }
+        }
+
+        // Initialize app
+        loadData();
+        renderDashboard();
+    </script>
+</body>
+</html>

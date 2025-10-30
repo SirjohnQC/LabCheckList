@@ -92,13 +92,19 @@
             margin-bottom: 0;
         }
 
-        input[type="text"] {
+        input[type="text"], textarea {
             flex: 1;
             min-width: 200px;
             padding: 12px;
             border: 2px solid #ddd;
             border-radius: 6px;
             font-size: 14px;
+            font-family: inherit;
+        }
+
+        textarea {
+            min-height: 80px;
+            resize: vertical;
         }
 
         input[type="file"] {
@@ -170,6 +176,34 @@
             background: #c82333;
         }
 
+        .btn-info {
+            background: #17a2b8;
+            color: white;
+        }
+
+        .btn-info:hover {
+            background: #138496;
+        }
+
+        .bulk-actions {
+            background: #e7f3ff;
+            border: 2px solid #17a2b8;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .bulk-actions.active {
+            display: block;
+        }
+
+        .bulk-actions-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
         .computers-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -183,11 +217,17 @@
             cursor: pointer;
             transition: all 0.3s;
             background: white;
+            position: relative;
         }
 
         .computer-card:hover {
             transform: translateY(-5px);
             box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+
+        .computer-card.selected {
+            border-color: #17a2b8;
+            box-shadow: 0 0 0 3px rgba(23, 162, 184, 0.2);
         }
 
         .computer-card.completed {
@@ -196,11 +236,27 @@
             border-color: #11998e;
         }
 
+        .computer-card.completed.selected {
+            border-color: #17a2b8;
+            box-shadow: 0 0 0 3px rgba(23, 162, 184, 0.4);
+        }
+
+        .card-checkbox {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            width: 24px;
+            height: 24px;
+            cursor: pointer;
+            z-index: 10;
+        }
+
         .computer-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 15px;
+            margin-top: 15px;
         }
 
         .computer-icon {
@@ -283,6 +339,20 @@
             color: #000;
         }
 
+        .computer-notes-preview {
+            font-size: 12px;
+            font-style: italic;
+            color: #666;
+            margin-top: 10px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .computer-card.completed .computer-notes-preview {
+            color: rgba(255,255,255,0.8);
+        }
+
         .detail-view {
             display: none;
         }
@@ -310,6 +380,24 @@
             padding: 20px;
             border-radius: 10px;
             margin-bottom: 20px;
+        }
+
+        .computer-notes-section {
+            background: #fff9e6;
+            border: 2px solid #ffc107;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .computer-notes-section h3 {
+            margin-bottom: 10px;
+            color: #856404;
+        }
+
+        .computer-notes-section textarea {
+            width: 100%;
+            border: 1px solid #ddd;
         }
 
         .checklist {
@@ -394,6 +482,15 @@
             color: #856404;
         }
 
+        .info-box {
+            background: #e7f3ff;
+            border: 2px solid #17a2b8;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            color: #004085;
+        }
+
         .success-message {
             background: #d4edda;
             border: 2px solid #28a745;
@@ -450,9 +547,22 @@
                         <input type="file" id="importFile" accept=".csv" onchange="importFromCSV(event)">
                     </div>
                     <div class="control-row">
+                        <button class="btn-info" onclick="toggleBulkMode()">☑️ Bulk Select</button>
                         <button class="btn-warning" onclick="resetAllChecks()">🔄 Reset All Checks</button>
                         <button class="btn-danger" onclick="clearAllData()">🗑️ Clear All Data</button>
-                        <button class="btn-danger" onclick="deleteAllComputers()">🗑️ Delete All Computers</button>
+                    </div>
+                </div>
+
+                <div id="bulkActions" class="bulk-actions">
+                    <div style="margin-bottom: 10px;">
+                        <strong><span id="selectedCount">0</span> computer(s) selected</strong>
+                    </div>
+                    <div class="bulk-actions-buttons">
+                        <button class="btn-info" onclick="selectAll()">Select All</button>
+                        <button class="btn-secondary" onclick="deselectAll()">Deselect All</button>
+                        <button class="btn-success" onclick="bulkExport()">📥 Export Selected</button>
+                        <button class="btn-danger" onclick="bulkDelete()">🗑️ Delete Selected</button>
+                        <button class="btn-secondary" onclick="toggleBulkMode()">Cancel</button>
                     </div>
                 </div>
 
@@ -472,6 +582,12 @@
                         <button class="btn-secondary" onclick="showDashboard()">← Back</button>
                         <button class="btn-danger" onclick="deleteCurrentComputer()">Delete Computer</button>
                     </div>
+                </div>
+
+                <div class="computer-notes-section">
+                    <h3>📝 Computer Notes</h3>
+                    <textarea id="computerNotesInput" placeholder="Add notes about this computer (e.g., special configurations, issues, hardware specs...)"></textarea>
+                    <button class="btn-primary" onclick="saveComputerNotes()" style="margin-top: 10px;">Save Notes</button>
                 </div>
 
                 <div class="detail-progress">
@@ -515,13 +631,14 @@
             "Check for Windows Updates",
             "Add user to remote desktop settings",
             "Remove user from 95 is it's a DEV",
-                    ];
+        ];
 
         let computers = [];
         let checklist = [...DEFAULT_CHECKLIST];
         let currentComputerId = null;
+        let bulkMode = false;
+        let selectedComputers = new Set();
 
-        // Load data from localStorage
         function loadData() {
             try {
                 const savedComputers = localStorage.getItem('labComputers');
@@ -530,6 +647,10 @@
                 if (savedComputers) {
                     const parsed = JSON.parse(savedComputers);
                     computers = Array.isArray(parsed) ? parsed : [];
+                    computers = computers.map(c => ({
+                        ...c,
+                        notes: c.notes || ''
+                    }));
                 } else {
                     computers = [];
                 }
@@ -547,7 +668,6 @@
             }
         }
 
-        // Save data to localStorage
         function saveData() {
             try {
                 localStorage.setItem('labComputers', JSON.stringify(computers));
@@ -558,7 +678,6 @@
             }
         }
 
-        // Show success message
         function showSuccess(message) {
             const msgEl = document.getElementById('successMessage');
             msgEl.textContent = message;
@@ -568,7 +687,6 @@
             }, 3000);
         }
 
-        // Add new computer
         function addComputer() {
             const nameInput = document.getElementById('computerName');
             const typeSelect = document.getElementById('computerType');
@@ -583,6 +701,7 @@
                 id: Date.now(),
                 name: name,
                 type: typeSelect.value,
+                notes: '',
                 tasks: checklist.map((task, index) => ({
                     id: index,
                     text: task,
@@ -597,7 +716,86 @@
             showSuccess(`Computer "${name}" added successfully!`);
         }
 
-        // Delete computer
+        function toggleBulkMode() {
+            bulkMode = !bulkMode;
+            selectedComputers.clear();
+            document.getElementById('bulkActions').classList.toggle('active', bulkMode);
+            renderDashboard();
+        }
+
+        function toggleComputerSelection(id, event) {
+            event.stopPropagation();
+            if (selectedComputers.has(id)) {
+                selectedComputers.delete(id);
+            } else {
+                selectedComputers.add(id);
+            }
+            document.getElementById('selectedCount').textContent = selectedComputers.size;
+            renderDashboard();
+        }
+
+        function selectAll() {
+            computers.forEach(c => selectedComputers.add(c.id));
+            document.getElementById('selectedCount').textContent = selectedComputers.size;
+            renderDashboard();
+        }
+
+        function deselectAll() {
+            selectedComputers.clear();
+            document.getElementById('selectedCount').textContent = 0;
+            renderDashboard();
+        }
+
+        function bulkDelete() {
+            if (selectedComputers.size === 0) {
+                alert('No computers selected');
+                return;
+            }
+            if (confirm(`Delete ${selectedComputers.size} selected computer(s)?`)) {
+                computers = computers.filter(c => !selectedComputers.has(c.id));
+                selectedComputers.clear();
+                saveData();
+                toggleBulkMode();
+                renderDashboard();
+                showSuccess('Selected computers deleted!');
+            }
+        }
+
+        function bulkExport() {
+            if (selectedComputers.size === 0) {
+                alert('No computers selected');
+                return;
+            }
+
+            const selected = computers.filter(c => selectedComputers.has(c.id));
+            let csv = 'Computer Name,Type,Notes,Task,Completed\n';
+            
+            selected.forEach(computer => {
+                computer.tasks.forEach(task => {
+                    const row = [
+                        `"${computer.name}"`,
+                        `"${computer.type}"`,
+                        `"${(computer.notes || '').replace(/"/g, '""')}"`,
+                        `"${task.text}"`,
+                        task.completed ? 'Yes' : 'No'
+                    ].join(',');
+                    csv += row + '\n';
+                });
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `lab-computers-selected-${new Date().toISOString().split('T')[0]}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+            
+            showSuccess(`Exported ${selectedComputers.size} computers!`);
+        }
+
         function deleteComputer(id) {
             const computer = computers.find(c => c.id === id);
             if (computer && confirm(`Are you sure you want to delete "${computer.name}"?`)) {
@@ -608,7 +806,6 @@
             }
         }
 
-        // Delete current computer from detail view
         function deleteCurrentComputer() {
             if (currentComputerId) {
                 const computer = computers.find(c => c.id === currentComputerId);
@@ -621,21 +818,6 @@
             }
         }
 
-        // Delete all computers
-        function deleteAllComputers() {
-            if (computers.length === 0) {
-                alert('No computers to delete');
-                return;
-            }
-            if (confirm('Are you sure you want to delete ALL computers? This cannot be undone.')) {
-                computers = [];
-                saveData();
-                renderDashboard();
-                showSuccess('All computers deleted successfully!');
-            }
-        }
-
-        // Clear all data (computers AND checklist)
         function clearAllData() {
             if (confirm('This will delete ALL computers AND reset the checklist to default. Are you sure?')) {
                 computers = [];
@@ -647,7 +829,6 @@
             }
         }
 
-        // Reset all checks
         function resetAllChecks() {
             if (computers.length === 0) {
                 alert('No computers to reset');
@@ -665,20 +846,20 @@
             }
         }
 
-        // Export to CSV
         function exportToCSV() {
             if (computers.length === 0) {
                 alert('No data to export');
                 return;
             }
 
-            let csv = 'Computer Name,Type,Task,Completed\n';
+            let csv = 'Computer Name,Type,Notes,Task,Completed\n';
             
             computers.forEach(computer => {
                 computer.tasks.forEach(task => {
                     const row = [
                         `"${computer.name}"`,
                         `"${computer.type}"`,
+                        `"${(computer.notes || '').replace(/"/g, '""')}"`,
                         `"${task.text}"`,
                         task.completed ? 'Yes' : 'No'
                     ].join(',');
@@ -699,7 +880,6 @@
             showSuccess('Data exported successfully!');
         }
 
-        // Import from CSV
         function importFromCSV(event) {
             const file = event.target.files[0];
             if (!file) return;
@@ -715,21 +895,21 @@
                         return;
                     }
 
-                    // Skip header
                     const dataLines = lines.slice(1);
                     const importedComputers = {};
 
                     dataLines.forEach(line => {
-                        const match = line.match(/^"([^"]*)","([^"]*)","([^"]*)","?([^"]*)"?$/);
+                        const match = line.match(/^"([^"]*)","([^"]*)","([^"]*)","([^"]*)","?([^"]*)"?$/);
                         if (!match) return;
 
-                        const [, name, type, taskText, completed] = match;
+                        const [, name, type, compNotes, taskText, completed] = match;
                         
                         if (!importedComputers[name]) {
                             importedComputers[name] = {
                                 id: Date.now() + Math.random(),
                                 name: name,
                                 type: type,
+                                notes: compNotes || '',
                                 tasks: []
                             };
                         }
@@ -761,7 +941,19 @@
             event.target.value = '';
         }
 
-        // Toggle task
+        function saveComputerNotes() {
+            if (!currentComputerId) return;
+            
+            const computer = computers.find(c => c.id === currentComputerId);
+            if (computer) {
+                const notesInput = document.getElementById('computerNotesInput');
+                computer.notes = notesInput.value.trim();
+                saveData();
+                showSuccess('Notes saved!');
+                renderDashboard();
+            }
+        }
+
         function toggleTask(computerId, taskId) {
             const computer = computers.find(c => c.id === computerId);
             if (computer) {
@@ -775,14 +967,12 @@
             }
         }
 
-        // Calculate progress
         function calculateProgress(computer) {
             const completed = computer.tasks.filter(t => t.completed).length;
             const total = computer.tasks.length;
             return { completed, total, percentage: (completed / total) * 100 };
         }
 
-        // Render dashboard
         function renderDashboard() {
             const grid = document.getElementById('computersGrid');
             grid.innerHTML = '';
@@ -794,12 +984,13 @@
             computers.forEach(computer => {
                 const progress = calculateProgress(computer);
                 const isComplete = progress.completed === progress.total;
+                const isSelected = selectedComputers.has(computer.id);
 
                 const card = document.createElement('div');
-                card.className = `computer-card ${isComplete ? 'completed' : ''}`;
-                card.onclick = () => showDetailView(computer.id);
-
-                card.innerHTML = `
+                card.className = `computer-card ${isComplete ? 'completed' : ''} ${isSelected ? 'selected' : ''}`;
+                
+                const cardContent = `
+                    ${bulkMode ? `<input type="checkbox" class="card-checkbox" ${isSelected ? 'checked' : ''} onclick="toggleComputerSelection(${computer.id}, event)">` : ''}
                     <div class="computer-header">
                         <div class="computer-icon">${isComplete ? '✅' : '🖥️'}</div>
                     </div>
@@ -814,15 +1005,21 @@
                     <span class="status-badge ${isComplete ? 'status-complete' : 'status-incomplete'}">
                         ${isComplete ? 'Complete' : 'In Progress'}
                     </span>
+                    ${computer.notes ? `<div class="computer-notes-preview">📝 ${computer.notes}</div>` : ''}
                 `;
-
+                
+                card.innerHTML = cardContent;
+                
+                if (!bulkMode) {
+                    card.onclick = () => showDetailView(computer.id);
+                }
+                
                 grid.appendChild(card);
             });
 
             updateStats();
         }
 
-        // Update statistics
         function updateStats() {
             const total = computers.length;
             const completed = computers.filter(c => {
@@ -836,7 +1033,6 @@
             document.getElementById('pendingComputers').textContent = pending;
         }
 
-        // Show detail view
         function showDetailView(computerId) {
             currentComputerId = computerId;
             document.getElementById('dashboardView').classList.remove('active');
@@ -846,7 +1042,6 @@
             renderDetailView(computerId);
         }
 
-        // Render detail view
         function renderDetailView(computerId) {
             const computer = computers.find(c => c.id === computerId);
             if (!computer) return;
@@ -857,6 +1052,8 @@
             const typeSpan = document.getElementById('detailComputerType');
             typeSpan.textContent = computer.type;
             typeSpan.className = `computer-type ${computer.type === 'Production' ? 'type-prod' : 'type-dev'}`;
+
+            document.getElementById('computerNotesInput').value = computer.notes || '';
 
             document.getElementById('detailProgress').textContent = 
                 `${progress.completed} of ${progress.total} tasks completed`;
@@ -879,9 +1076,11 @@
             });
         }
 
-        // Show dashboard
         function showDashboard() {
             currentComputerId = null;
+            bulkMode = false;
+            selectedComputers.clear();
+            document.getElementById('bulkActions').classList.remove('active');
             document.getElementById('dashboardView').style.display = 'block';
             document.getElementById('dashboardView').classList.add('active');
             document.getElementById('detailView').classList.remove('active');
@@ -889,7 +1088,6 @@
             renderDashboard();
         }
 
-        // Show settings
         function showSettings() {
             document.getElementById('dashboardView').style.display = 'none';
             document.getElementById('dashboardView').classList.remove('active');
@@ -898,7 +1096,6 @@
             renderSettings();
         }
 
-        // Render settings
         function renderSettings() {
             const list = document.getElementById('settingsList');
             list.innerHTML = '';
@@ -916,7 +1113,6 @@
             });
         }
 
-        // Update task in checklist
         function updateTask(index, newText) {
             if (newText.trim()) {
                 checklist[index] = newText.trim();
@@ -924,7 +1120,6 @@
             }
         }
 
-        // Delete task from checklist
         function deleteTask(index) {
             if (confirm('Delete this task from the checklist?')) {
                 checklist.splice(index, 1);
@@ -933,7 +1128,6 @@
             }
         }
 
-        // Add new task
         function addNewTask() {
             const input = document.getElementById('newTaskInput');
             const text = input.value.trim();
@@ -949,7 +1143,6 @@
             renderSettings();
         }
 
-        // Reset to default checklist
         function resetToDefault() {
             if (confirm('Reset checklist to default? This will not affect existing computers.')) {
                 checklist = [...DEFAULT_CHECKLIST];
@@ -958,7 +1151,6 @@
             }
         }
 
-        // Initialize app
         loadData();
         renderDashboard();
     </script>
